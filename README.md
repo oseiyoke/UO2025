@@ -1,4 +1,25 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wedding App
+
+This is a Next.js application for a wedding event, allowing guests to view details and the program of events.
+
+## PWA Support
+
+This application has been configured as a Progressive Web App (PWA), which means users can install it on their devices and access it offline.
+
+### Icons
+
+For the PWA to work properly, you need to add the following icon files to the `public/icons` directory:
+
+- icon-72x72.png (72x72 pixels)
+- icon-96x96.png (96x96 pixels)
+- icon-128x128.png (128x128 pixels)
+- icon-144x144.png (144x144 pixels)
+- icon-152x152.png (152x152 pixels)
+- icon-192x192.png (192x192 pixels)
+- icon-384x384.png (384x384 pixels)
+- icon-512x512.png (512x512 pixels)
+
+These should be square PNG images of the specified dimensions. You can use tools like [favicon.io](https://favicon.io/) to generate these icons from an image.
 
 ## Getting Started
 
