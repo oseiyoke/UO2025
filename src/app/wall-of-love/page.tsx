@@ -127,7 +127,7 @@ export default function WallOfLovePage() {
         
         {/* Post Form */}
         <div className="bg-white rounded-xl shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Share Your Message</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Share Your Message</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="author" className="block text-sm font-medium text-gray-900 mb-1">Your Name</label>
@@ -160,7 +160,7 @@ export default function WallOfLovePage() {
                 id="image"
                 accept="image/*"
                 onChange={handleImageChange}
-                className="w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+                className="w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
               />
               
               {previewUrl && (
@@ -191,8 +191,8 @@ export default function WallOfLovePage() {
             <div key={post.id} className="bg-white rounded-xl shadow p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="font-semibold text-lg">{post.author}</h3>
-                  <p className="text-gray-600 text-sm">{post.date}</p>
+                  <h3 className="font-semibold text-lg text-gray-900">{post.author}</h3>
+                  <p className="text-gray-800 text-sm">{post.date}</p>
                 </div>
               </div>
               
@@ -214,14 +214,14 @@ export default function WallOfLovePage() {
       
       {/* Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-3 px-4 flex justify-around items-center">
-        <Link href="/" className="flex flex-col items-center text-gray-600 hover:text-pink-600">
+        <Link href="/" className="flex flex-col items-center text-gray-800 hover:text-pink-600">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
           <span className="text-xs mt-1">Home</span>
         </Link>
         
-        <Link href="/program?event=0" className="flex flex-col items-center text-gray-600 hover:text-pink-600">
+        <Link href="/program?event=0" className="flex flex-col items-center text-gray-800 hover:text-pink-600">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>

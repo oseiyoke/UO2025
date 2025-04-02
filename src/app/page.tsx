@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import InstallApp from "./components/InstallApp";
+import InstallApp, { InstallAppRef } from "./components/InstallApp";
 import HeartLogo from "./components/HeartLogo";
 
 export default function Home() {
@@ -54,6 +54,19 @@ export default function Home() {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const [isPWA, setIsPWA] = useState(false);
+
+  // Ref for the InstallApp component
+  const installAppRef = useRef<InstallAppRef>(null);
+
+  // Check if app is running as PWA
+  useEffect(() => {
+    // Check if the app is installed as PWA (in standalone mode or display-mode is standalone)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                        ('standalone' in window.navigator && (window.navigator as Navigator & { standalone?: boolean }).standalone) || 
+                        document.referrer.includes('android-app://');
+    setIsPWA(isStandalone);
+  }, []);
 
   // Handle swipe functionality
   useEffect(() => {
@@ -104,14 +117,16 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-br from-pink-50 via-white to-purple-50">
-      <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center h-full p-8 pb-20 gap-8 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="fixed inset-0 overflow-hidden bg-gradient-to-br from-pink-50 via-white to-purple-50">
+      <div className="h-full grid grid-rows-[auto_1fr_auto] items-center justify-items-center p-8 pb-20 sm:p-20 font-[family-name:var(--font-geist-sans)]">
         {/* Logo in the top left */}
         <div className="absolute top-6 left-6">
           <HeartLogo />
         </div>
         
-        <main className="flex flex-col gap-[24px] row-start-2 items-center sm:items-center max-w-4xl mt-10">
+        <div className="w-full"></div>
+        
+        <main className="w-full flex flex-col gap-[24px] items-center sm:items-center max-w-4xl self-center">
           <h1 className="text-4xl font-bold text-center text-gray-800">Obose &amp; Unwana&apos;s Wedding</h1>
           <p className="text-xl text-center text-gray-700 mb-1">We&apos;re getting married! Join us for our special day.</p>
           <a 
@@ -159,25 +174,30 @@ export default function Home() {
             <p className="text-xs text-center mt-3 text-gray-500">Swipe or tap dots to change events • Tap card for details</p>
           </div>
           
-          <div className="w-full max-w-sm">
-            <button 
-              onClick={() => {
-                const installApp = document.querySelector('button[data-install="true"]');
-                if (installApp instanceof HTMLButtonElement) {
-                  installApp.click();
-                }
-              }}
-              className="rounded-full border border-solid border-pink-600 text-pink-600 transition-colors flex items-center justify-center hover:bg-pink-50 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full"
-            >
-              Download App
-            </button>
-          </div>
+          {!isPWA && (
+            <div className="w-full max-w-sm">
+              <button 
+                onClick={() => {
+                  // Use the ref to trigger installation
+                  if (installAppRef.current) {
+                    console.log('Triggering app install from button');
+                    installAppRef.current.triggerInstall();
+                  } else {
+                    console.error('InstallApp ref not available');
+                  }
+                }}
+                className="rounded-full border border-solid border-pink-600 text-pink-600 transition-colors flex items-center justify-center hover:bg-pink-50 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full"
+              >
+                Download App
+              </button>
+            </div>
+          )}
           
-          <div className="absolute opacity-0 pointer-events-auto">
-            <InstallApp />
+          <div>
+            <InstallApp ref={installAppRef} />
           </div>
         </main>
-        <footer className="row-start-3 text-center">
+        <footer className="text-center mt-auto w-full">
           <p className="text-sm text-gray-600">Made with love by the happy couple</p>
         </footer>
       </div>
