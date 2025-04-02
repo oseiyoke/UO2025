@@ -17,10 +17,8 @@ export interface InstallAppRef {
   getDeviceType: () => DeviceType;
 }
 
-// Define props interface
-interface InstallAppProps {
-  // No props needed for now, but this allows us to extend in the future
-}
+// Define props type
+type InstallAppProps = Record<string, never>;
 
 const InstallApp = forwardRef<InstallAppRef, InstallAppProps>((props, ref) => {
   const [showInstructions, setShowInstructions] = useState(false);
