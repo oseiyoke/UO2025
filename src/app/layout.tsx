@@ -34,8 +34,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
+        <link rel="apple-touch-icon" href="/wedding-logo/UO2025.png" />
+        <link rel="apple-touch-startup-image" href="/wedding-logo/UO2025.png" />
+        <link rel="icon" href="/wedding-logo/UO2025.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="theme-color" content="#FDF2F8" />

@@ -56,6 +56,11 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Additional fix for navigation bars */
+.safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+}
+
 /* Fix for inputs on iOS */
 input, textarea, button {
   font-size: 16px; /* Prevents iOS from zooming when focusing on inputs */
