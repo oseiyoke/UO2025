@@ -65,7 +65,7 @@ export default function InstallApp() {
   };
 
   return (
-    <div className="mt-8">
+    <div className="">
       {isInstallable && (
         <button 
           onClick={handleInstallClick}
@@ -79,6 +79,7 @@ export default function InstallApp() {
         <button 
           onClick={() => setShowInstructions(true)}
           className="bg-pink-600 text-white px-4 py-2 rounded-full hover:bg-pink-700 transition-colors w-full"
+          data-install="true"
         >
           Download App
         </button>
