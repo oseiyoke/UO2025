@@ -17,8 +17,8 @@ export interface InstallAppRef {
   getDeviceType: () => DeviceType;
 }
 
-// Define props type
-type InstallAppProps = Record<string, never>;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface InstallAppProps {}
 
 const InstallApp = forwardRef<InstallAppRef, InstallAppProps>((props, ref) => {
   const [showInstructions, setShowInstructions] = useState(false);
