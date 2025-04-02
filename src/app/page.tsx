@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import InstallApp from "./components/InstallApp";
+import HeartLogo from "./components/HeartLogo";
 
 export default function Home() {
   // Event data for the carousel
@@ -105,7 +106,12 @@ export default function Home() {
   return (
     <div className="h-screen overflow-hidden bg-gradient-to-br from-pink-50 via-white to-purple-50">
       <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center h-full p-8 pb-20 gap-8 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-        <main className="flex flex-col gap-[24px] row-start-2 items-center sm:items-center max-w-4xl">
+        {/* Logo in the top left */}
+        <div className="absolute top-6 left-6">
+          <HeartLogo />
+        </div>
+        
+        <main className="flex flex-col gap-[24px] row-start-2 items-center sm:items-center max-w-4xl mt-10">
           <h1 className="text-4xl font-bold text-center text-gray-800">Obose &amp; Unwana&apos;s Wedding</h1>
           <p className="text-xl text-center text-gray-700 mb-1">We&apos;re getting married! Join us for our special day.</p>
           <a 

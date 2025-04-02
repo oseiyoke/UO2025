@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import HeartLogo from '../components/HeartLogo';
 
-export default function ProgramPage() {
+function ProgramContent() {
   const searchParams = useSearchParams();
   const eventId = Number(searchParams.get('event') || '0'); // Default to traditional wedding event
 
@@ -200,8 +202,13 @@ export default function ProgramPage() {
 
   return (
     <div className="min-h-screen pb-20 bg-gradient-to-b from-pink-50 to-white">
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="mb-8">
+      <div className="max-w-4xl mx-auto p-6 relative">
+        {/* Logo in the top left */}
+        <div className="absolute top-6 left-6">
+          <HeartLogo />
+        </div>
+
+        <div className="mb-8 pl-16">
           <Link href="/" className="text-pink-600 hover:text-pink-800 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -289,5 +296,20 @@ export default function ProgramPage() {
         </Link>
       </nav>
     </div>
+  );
+}
+
+export default function ProgramPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-pink-50 to-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading event details...</p>
+        </div>
+      </div>
+    }>
+      <ProgramContent />
+    </Suspense>
   );
 } 
