@@ -1,43 +1,58 @@
 'use client';
 
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import HeartLogo from '../components/HeartLogo';
 
 function ProgramContent() {
   const searchParams = useSearchParams();
-  const eventId = Number(searchParams.get('event') || '0'); // Default to traditional wedding event
+  const defaultEventId = Number(searchParams.get('event') || '0');
+  const [activeEvent, setActiveEvent] = useState(defaultEventId); // Set based on URL param
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
-  // Event headers information
-  const eventHeaders = [
+  // Event data - common across home and program pages
+  const events = [
     {
-      title: 'Traditional Wedding',
-      date: 'Friday, April 11, 2025',
-      venue: 'Jacksville Event Center',
-      location: 'Uyo, Nigeria',
-      mapUrl: 'https://maps.google.com/?q=Jacksville+Event+Center+Uyo+Nigeria'
+      id: 1,
+      day: "Friday",
+      date: "April 11, 2025",
+      name: "Traditional Wedding",
+      time: "12:00 PM",
+      venue: "Jacksville Event Center",
+      location: "Uyo, Nigeria",
+      mapUrl: "https://maps.google.com/?q=Jacksville+Event+Center+Uyo+Nigeria"
     },
     {
-      title: 'Cocktail Night',
-      date: 'Friday, April 11, 2025',
-      venue: 'Chalis Apartments',
-      location: 'Uyo, Nigeria',
-      mapUrl: 'https://maps.google.com/?q=Chalis+Apartments+Uyo+Nigeria'
+      id: 2,
+      day: "Friday",
+      date: "April 11, 2025",
+      name: "Cocktail Night",
+      time: "7:00 PM",
+      venue: "Chalis Apartments",
+      location: "Uyo, Nigeria",
+      mapUrl: "https://maps.google.com/?q=Chalis+Apartments+Uyo+Nigeria"
     },
     {
-      title: 'Wedding Ceremony',
-      date: 'Saturday, April 12, 2025',
-      venue: 'Flairmore Event Center',
-      location: 'Uyo, Nigeria',
-      mapUrl: 'https://maps.google.com/?q=Flairmore+Event+Center+Uyo+Nigeria'
+      id: 3,
+      day: "Saturday",
+      date: "April 12, 2025",
+      name: "Wedding Ceremony",
+      time: "1:00 PM",
+      venue: "Flairmore Event Center",
+      location: "Uyo, Nigeria",
+      mapUrl: "https://maps.google.com/?q=Flairmore+Event+Center+Uyo+Nigeria"
     },
     {
-      title: 'Beach Day',
-      date: 'Sunday, April 13, 2025',
-      venue: 'Ibeno Beach',
-      location: 'Ibeno, Nigeria',
-      mapUrl: 'https://maps.google.com/?q=Ibeno+Beach+Nigeria'
+      id: 4,
+      day: "Sunday",
+      date: "April 13, 2025",
+      name: "Beach Day",
+      time: "2:00 PM",
+      venue: "Ibeno Beach",
+      location: "Ibeno, Nigeria",
+      mapUrl: "https://maps.google.com/?q=Ibeno+Beach+Nigeria"
     }
   ];
 
@@ -197,34 +212,70 @@ function ProgramContent() {
     ]
   ];
 
-  const selectedEvent = eventHeaders[eventId];
-  const programEvents = allProgramData[eventId];
+  const programEvents = allProgramData[activeEvent];
+
+  // Handle swipe functionality for carousel
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      touchEndX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+      const difference = touchStartX.current - touchEndX.current;
+      
+      // Minimum swipe distance (pixels)
+      if (Math.abs(difference) < 50) return;
+      
+      if (difference > 0) {
+        // Swipe left - next event
+        setActiveEvent(prev => (prev < events.length - 1 ? prev + 1 : prev));
+      } else {
+        // Swipe right - previous event
+        setActiveEvent(prev => (prev > 0 ? prev - 1 : prev));
+      }
+    };
+
+    const carousel = carouselRef.current;
+    if (carousel) {
+      carousel.addEventListener('touchstart', handleTouchStart);
+      carousel.addEventListener('touchmove', handleTouchMove);
+      carousel.addEventListener('touchend', handleTouchEnd);
+    }
+
+    return () => {
+      if (carousel) {
+        carousel.removeEventListener('touchstart', handleTouchStart);
+        carousel.removeEventListener('touchmove', handleTouchMove);
+        carousel.removeEventListener('touchend', handleTouchEnd);
+      }
+    };
+  }, [events.length]);
+
+  // Handle click on location to open Google Maps
+  const handleLocationClick = (e: React.MouseEvent, url: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   return (
-    <div className="min-h-screen overflow-y-auto pb-28 bg-gradient-to-b from-pink-50 to-white">
+    <div className="min-h-screen overflow-y-auto bg-gradient-to-b from-pink-50 to-white">
       <div className="max-w-4xl mx-auto p-6 relative">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <div className="mb-6">
             <HeartLogo width={100} height={100} />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-[#7C9270] mb-2">{selectedEvent.title}</h1>
-          <p className="text-gray-600">{selectedEvent.date}</p>
-          <div className="mt-1">
-            <p className="text-gray-600">{selectedEvent.venue}</p>
-            <a 
-              href={selectedEvent.mapUrl} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-[#7C9270] hover:text-[#5A6851] hover:underline"
-            >
-              {selectedEvent.location} (Open in Maps)
-            </a>
-          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-[#7C9270] mb-2">Program</h1>
+          
           <a 
             href="https://www.instagram.com/explore/tags/uo2025/" 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="flex items-center gap-1 text-sm font-semibold text-pink-600 hover:text-pink-800 transition-colors justify-center mt-3"
+            className="flex items-center gap-1 text-sm font-semibold text-pink-600 hover:text-pink-800 transition-colors justify-center mt-3 mb-6"
           >
             <span className="flex text-pink-600 gap-1 items-center">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
@@ -233,6 +284,35 @@ function ProgramContent() {
               #UO2025
             </span>
           </a>
+        </div>
+        
+        {/* Event Carousel - Moved from home page */}
+        <div className="w-full max-w-md mx-auto mb-8" ref={carouselRef}>
+          <div className="flex justify-center mb-4">
+            {events.map((event, index) => (
+              <button
+                key={event.id}
+                onClick={() => setActiveEvent(index)}
+                className={`w-2 h-2 mx-1 rounded-full ${activeEvent === index ? 'bg-pink-600' : 'bg-gray-300'}`}
+                aria-label={`View ${event.name} details`}
+              />
+            ))}
+          </div>
+          
+          <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
+            <p className="text-sm font-medium text-pink-600 mb-1">{events[activeEvent].day}</p>
+            <p className="text-lg font-bold text-gray-800 mb-2">{events[activeEvent].name}</p>
+            <p className="text-lg text-gray-800">{events[activeEvent].date}</p>
+            <p className="text-lg text-gray-800">{events[activeEvent].time}</p>
+            <p className="text-lg text-gray-800">{events[activeEvent].venue}</p>
+            <span 
+              onClick={(e) => handleLocationClick(e, events[activeEvent].mapUrl)}
+              className="text-lg text-blue-600 hover:underline cursor-pointer"
+            >
+              {events[activeEvent].location}
+            </span>
+          </div>
+          <p className="text-xs text-center mt-3 text-gray-500">Swipe or tap dots to change events</p>
         </div>
         
         <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-pink-100">
@@ -260,32 +340,6 @@ function ProgramContent() {
           <p className="mt-2">Please arrive 30 minutes before the event begins.</p>
         </div>
       </div>
-      
-      {/* Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-4 px-4 pb-6 md:pb-4 safe-bottom">
-        <div className="grid grid-cols-3 w-full max-w-md mx-auto">
-          <Link href="/" className="flex flex-col items-center justify-center text-gray-800 hover:text-[#7C9270]">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            <span className="text-xs mt-1">Home</span>
-          </Link>
-          
-          <Link href="/program?event=0" className="flex flex-col items-center justify-center text-[#7C9270]">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="text-xs mt-1">Program</span>
-          </Link>
-          
-          <Link href="/wall-of-love" className="flex flex-col items-center justify-center text-gray-800 hover:text-[#7C9270]">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-            <span className="text-xs mt-1">Wall of Love</span>
-          </Link>
-        </div>
-      </nav>
     </div>
   );
 }

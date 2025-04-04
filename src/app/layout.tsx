@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
+import Navbar from "./components/Navbar";
+import { PostsProvider } from "./context/PostsContext";
+import PostsLoadingControl from "./components/PostsLoadingControl";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,7 +48,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} antialiased bg-gradient-to-br from-pink-50 via-white to-purple-50`}
       >
-        {children}
+        <PostsProvider>
+          <PostsLoadingControl />
+          <div className="pb-28">
+            {children}
+            <Navbar />
+          </div>
+        </PostsProvider>
       </body>
     </html>
   );

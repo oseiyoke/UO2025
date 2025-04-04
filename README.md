@@ -41,6 +41,28 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Supabase Integration
+
+This application uses Supabase for data storage. To set up Supabase:
+
+1. Create a Supabase account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Get your API credentials from the project settings
+4. Create a `.env.local` file in the root directory with the following variables:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+5. Create the required database tables:
+   - Create a `posts` table with columns:
+     - `id` (integer, primary key)
+     - `author` (text)
+     - `message` (text)
+     - `image_url` (text)
+     - `created_at` (timestamp with timezone)
+6. Set up Storage:
+   - Create a new bucket called `wall-of-love` with public access enabled
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

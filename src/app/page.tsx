@@ -1,59 +1,11 @@
 'use client';
 
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import InstallApp, { InstallAppRef } from "./components/InstallApp";
 import HeartLogo from "./components/HeartLogo";
 
 export default function Home() {
-  // Event data for the carousel
-  const events = [
-    {
-      id: 1,
-      day: "Friday",
-      date: "April 11, 2025",
-      name: "Traditional Wedding",
-      time: "12:00 PM",
-      venue: "Jacksville Event Center",
-      location: "Uyo, Nigeria",
-      mapUrl: "https://maps.google.com/?q=Jacksville+Event+Center+Uyo+Nigeria"
-    },
-    {
-      id: 2,
-      day: "Friday",
-      date: "April 11, 2025",
-      name: "Cocktail Night",
-      time: "7:00 PM",
-      venue: "Chalis Apartments",
-      location: "Uyo, Nigeria",
-      mapUrl: "https://maps.google.com/?q=Chalis+Apartments+Uyo+Nigeria"
-    },
-    {
-      id: 3,
-      day: "Saturday",
-      date: "April 12, 2025",
-      name: "Wedding Ceremony",
-      time: "1:00 PM",
-      venue: "Flairmore Event Center",
-      location: "Uyo, Nigeria",
-      mapUrl: "https://maps.google.com/?q=Flairmore+Event+Center+Uyo+Nigeria"
-    },
-    {
-      id: 4,
-      day: "Sunday",
-      date: "April 13, 2025",
-      name: "Beach Day",
-      time: "2:00 PM",
-      venue: "Ibeno Beach",
-      location: "Ibeno, Nigeria",
-      mapUrl: "https://maps.google.com/?q=Ibeno+Beach+Nigeria"
-    }
-  ];
-
-  const [activeEvent, setActiveEvent] = useState(0); // Traditional wedding is default
-  const touchStartX = useRef(0);
-  const touchEndX = useRef(0);
-  const carouselRef = useRef<HTMLDivElement>(null);
   const [isPWA, setIsPWA] = useState(false);
 
   // Ref for the InstallApp component
@@ -68,57 +20,9 @@ export default function Home() {
     setIsPWA(isStandalone);
   }, []);
 
-  // Handle swipe functionality
-  useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      touchEndX.current = e.touches[0].clientX;
-    };
-
-    const handleTouchEnd = () => {
-      const difference = touchStartX.current - touchEndX.current;
-      
-      // Minimum swipe distance (pixels)
-      if (Math.abs(difference) < 50) return;
-      
-      if (difference > 0) {
-        // Swipe left - next event
-        setActiveEvent(prev => (prev < events.length - 1 ? prev + 1 : prev));
-      } else {
-        // Swipe right - previous event
-        setActiveEvent(prev => (prev > 0 ? prev - 1 : prev));
-      }
-    };
-
-    const carousel = carouselRef.current;
-    if (carousel) {
-      carousel.addEventListener('touchstart', handleTouchStart);
-      carousel.addEventListener('touchmove', handleTouchMove);
-      carousel.addEventListener('touchend', handleTouchEnd);
-    }
-
-    return () => {
-      if (carousel) {
-        carousel.removeEventListener('touchstart', handleTouchStart);
-        carousel.removeEventListener('touchmove', handleTouchMove);
-        carousel.removeEventListener('touchend', handleTouchEnd);
-      }
-    };
-  }, [events.length]);
-
-  // Handle click on location to open Google Maps
-  const handleLocationClick = (e: React.MouseEvent, url: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
   return (
     <div className="min-h-screen overflow-y-auto bg-gradient-to-br from-pink-50 via-white to-purple-50">
-      <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center p-8 pb-24 sm:p-20 sm:pb-24 font-[family-name:var(--font-geist-sans)]">
+      <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center p-8 sm:p-20 font-[family-name:var(--font-geist-sans)]">
         <div className="w-full"></div>
         
         <main className="w-full flex flex-col gap-[24px] items-center sm:items-center max-w-4xl self-center">
@@ -126,7 +30,7 @@ export default function Home() {
           <div className="my-4">
             <HeartLogo width={120} height={120} />
           </div>
-          <h1 className="text-4xl font-bold text-center text-[#7C9270]">Obose &amp; Unwana&apos;s Wedding</h1>
+          <h1 className="text-4xl font-bold text-center text-[#7C9270]">Unwana &amp; Obose &apos;s Wedding</h1>
           <p className="text-xl text-center text-gray-700 mb-1">We&apos;re getting married! Join us for our special day.</p>
           <a 
             href="https://www.instagram.com/explore/tags/uo2025/" 
@@ -142,39 +46,54 @@ export default function Home() {
             </span>
           </a>
           
-          {/* Event Carousel */}
-          <div className="w-full max-w-md" ref={carouselRef}>
-            <div className="flex justify-center mb-4">
-              {events.map((event, index) => (
-                <button
-                  key={event.id}
-                  onClick={() => setActiveEvent(index)}
-                  className={`w-2 h-2 mx-1 rounded-full ${activeEvent === index ? 'bg-pink-600' : 'bg-gray-300'}`}
-                  aria-label={`View ${event.name} details`}
-                />
-              ))}
-            </div>
-            
-            <Link href={`/program?event=${activeEvent}`}>
-              <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                <p className="text-sm font-medium text-pink-600 mb-1">{events[activeEvent].day}</p>
-                <p className="text-lg font-bold text-gray-800 mb-2">{events[activeEvent].name}</p>
-                <p className="text-lg text-gray-800">{events[activeEvent].date}</p>
-                <p className="text-lg text-gray-800">{events[activeEvent].time}</p>
-                <p className="text-lg text-gray-800">{events[activeEvent].venue}</p>
-                <span 
-                  onClick={(e) => handleLocationClick(e, events[activeEvent].mapUrl)}
-                  className="text-lg text-blue-600 hover:underline cursor-pointer"
-                >
-                  {events[activeEvent].location}
-                </span>
+          {/* Action Buttons */}
+          <div className="w-full max-w-md space-y-10 mt-6">
+            <Link href="/program?event=0">
+              <div className="flex items-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-lg transition-shadow cursor-pointer border border-gray-100 mb-4">
+                <div className="bg-[#7C9270] rounded-full p-3 mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800 text-lg">View Program</h3>
+                  <p className="text-gray-600 text-sm">See event schedule and details</p>
+                </div>
               </div>
             </Link>
-            <p className="text-xs text-center mt-3 text-gray-500">Swipe or tap dots to change events • Tap card for details</p>
+            
+            <Link href="/wall-of-love">
+              <div className="flex items-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-lg transition-shadow cursor-pointer border border-gray-100 mb-4">
+                <div className="bg-pink-500 rounded-full p-3 mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800 text-lg">Capture Moment</h3>
+                  <p className="text-gray-600 text-sm">Share photos and memories</p>
+                </div>
+              </div>
+            </Link>
+            
+            <Link href="/request-song">
+              <div className="flex items-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-lg transition-shadow cursor-pointer border border-gray-100">
+                <div className="bg-purple-500 rounded-full p-3 mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-800 text-lg">Request Song</h3>
+                  <p className="text-gray-600 text-sm">Ask the DJ to play your favorite</p>
+                </div>
+              </div>
+            </Link>
           </div>
           
           {!isPWA && (
-            <div className="w-full max-w-sm">
+            <div className="w-full max-w-sm mt-8">
               <button 
                 onClick={() => {
                   // Use the ref to trigger installation
@@ -196,34 +115,7 @@ export default function Home() {
             <InstallApp ref={installAppRef} />
           </div>
         </main>
-        {/* <footer className="text-center mt-auto w-full">
-          <p className="text-sm text-gray-600">Made with love by the happy couple</p>
-        </footer> */}
       </div>
-      
-      {/* Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-4 px-4 pb-6 md:pb-4 flex justify-around items-center safe-bottom">
-        <Link href="/" className="flex flex-col items-center text-[#7C9270]">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          <span className="text-xs mt-1">Home</span>
-        </Link>
-        
-        <Link href="/program?event=0" className="flex flex-col items-center text-gray-600 hover:text-[#7C9270]">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span className="text-xs mt-1">Program</span>
-        </Link>
-        
-        <Link href="/wall-of-love" className="flex flex-col items-center text-gray-600 hover:text-[#7C9270]">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-          <span className="text-xs mt-1">Wall of Love</span>
-        </Link>
-      </nav>
     </div>
   );
 }

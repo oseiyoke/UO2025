@@ -1,42 +1,12 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import Link from 'next/link';
 import HeartLogo from '../components/HeartLogo';
-
-interface Post {
-  id: number;
-  author: string;
-  message: string;
-  image?: string;
-  date: string;
-}
+import { supabase } from '@/lib/supabase';
+import { usePosts } from '../context/PostsContext';
 
 export default function WallOfLovePage() {
-  // Sample data for demonstration
-  const [posts, setPosts] = useState<Post[]>([
-    {
-      id: 1,
-      author: 'Obose & Unwana',
-      message: 'We can\'t wait to celebrate with everyone!',
-      image: 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=1470&auto=format&fit=crop',
-      date: 'March 15, 2025'
-    },
-    {
-      id: 2,
-      author: 'Michael',
-      message: 'Looking forward to the beach day! It\'s going to be amazing!',
-      image: 'https://images.unsplash.com/photo-1437719417032-8595fd9e9dc6?q=80&w=1374&auto=format&fit=crop',
-      date: 'March 10, 2025'
-    },
-    {
-      id: 3,
-      author: 'Lisa',
-      message: 'So happy for both of you! Can\'t wait to dance all night at the reception.',
-      image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=1469&auto=format&fit=crop',
-      date: 'March 5, 2025'
-    }
-  ]);
+  const { posts, setPosts, loading, fetchPosts } = usePosts();
 
   // State for post creation flow
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -79,34 +49,78 @@ export default function WallOfLovePage() {
   };
 
   // Handle form submission after adding details
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!previewUrl) return;
+    if (!previewUrl || !newPost.image) return;
     
-    // Create the new post
-    const newPostWithId: Post = {
-      id: posts.length + 1,
-      author: newPost.author || 'Anonymous',
-      message: newPost.message || 'Shared a moment!',
-      image: previewUrl,
-      date: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    };
-    
-    // Add the post and reset
-    setPosts([newPostWithId, ...posts]);
-    setIsModalOpen(false);
-    setStep('image');
-    setNewPost({
-      author: '',
-      message: '',
-      image: null
-    });
-    setPreviewUrl(null);
+    try {
+      // Create the new post
+      const filePath = `wall-of-love/${new Date().toISOString()}-${newPost.image.name}`;
+      const { error: uploadError } = await supabase
+        .storage
+        .from('wall-of-love')
+        .upload(filePath, newPost.image);
+
+      if (uploadError) {
+        console.error('Error uploading image:', uploadError);
+        return;
+      }
+      
+      // Get the public URL for the image
+      const { data: publicUrlData } = supabase
+        .storage
+        .from('wall-of-love')
+        .getPublicUrl(filePath);
+        
+      const imageUrl = publicUrlData.publicUrl;
+
+      const { data: newPostData, error: postError } = await supabase
+        .from('posts')
+        .insert([
+          {
+            author: newPost.author || 'Anonymous',
+            message: newPost.message || 'Shared a moment!',
+            image_url: imageUrl,
+            created_at: new Date().toISOString()
+          }
+        ])
+        .select();
+
+      if (postError) {
+        console.error('Error inserting post:', postError);
+        return;
+      }
+
+      // Instead of fetching all posts again, just update the context
+      if (newPostData && newPostData.length > 0) {
+        // New post should appear at the beginning of the list
+        const updatedPosts = [...newPostData, ...posts];
+        setPosts(updatedPosts);
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Post added - updated in memory');
+        }
+      } else {
+        // If we couldn't get the new post data, fetch all posts
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Fetching posts: after new post creation');
+        }
+        fetchPosts();
+      }
+      
+      // Reset form
+      setIsModalOpen(false);
+      setStep('image');
+      setNewPost({
+        author: '',
+        message: '',
+        image: null
+      });
+      setPreviewUrl(null);
+    } catch (error) {
+      console.error('Error creating post:', error);
+    }
   };
 
   // Cancel post creation
@@ -121,8 +135,17 @@ export default function WallOfLovePage() {
     setPreviewUrl(null);
   };
 
+  // Function to format date from ISO string
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
-    <div className="min-h-screen overflow-y-auto pb-28 bg-gradient-to-b from-pink-50 to-white">
+    <div className="min-h-screen overflow-y-auto bg-gradient-to-b from-pink-50 to-white">
       <div className="max-w-4xl mx-auto p-6 relative">
         <div className="text-center mb-8">
           <div className="mb-6">
@@ -247,58 +270,54 @@ export default function WallOfLovePage() {
           </div>
         )}
         
+        {/* Loading State */}
+        {loading && (
+          <div className="flex justify-center my-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#7C9270]"></div>
+          </div>
+        )}
+        
+        {/* Empty State */}
+        {!loading && posts.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-600 mb-4">No posts yet. Be the first to share!</p>
+            <button 
+              onClick={openImagePicker}
+              className="bg-[#7C9270] text-white py-2 px-6 rounded-md hover:bg-[#5A6851] transition-colors"
+            >
+              Share a Photo
+            </button>
+          </div>
+        )}
+        
         {/* Wall of Posts */}
-        <div className="space-y-6">
-          {posts.map(post => (
-            <div key={post.id} className="bg-white rounded-xl shadow p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-semibold text-lg text-gray-900">{post.author}</h3>
-                  <p className="text-gray-800 text-sm">{post.date}</p>
+        {!loading && posts.length > 0 && (
+          <div className="space-y-6">
+            {posts.map(post => (
+              <div key={post.id} className="bg-white rounded-xl shadow p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-semibold text-lg text-gray-900">{post.author}</h3>
+                    <p className="text-gray-800 text-sm">{formatDate(post.created_at)}</p>
+                  </div>
                 </div>
+                
+                <p className="text-gray-900 mb-4">{post.message}</p>
+                
+                {post.image_url && (
+                  <div className="mt-2 rounded-md overflow-hidden">
+                    <img 
+                      src={post.image_url}
+                      alt={`Post by ${post.author}`}
+                      className="w-full h-auto object-cover"
+                    />
+                  </div>
+                )}
               </div>
-              
-              <p className="text-gray-900 mb-4">{post.message}</p>
-              
-              {post.image && (
-                <div className="mt-2 rounded-md overflow-hidden">
-                  <img 
-                    src={post.image}
-                    alt={`Post by ${post.author}`}
-                    className="w-full h-auto object-cover"
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
-      
-      {/* Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-4 px-4 pb-6 md:pb-4 safe-bottom">
-        <div className="grid grid-cols-3 w-full max-w-md mx-auto">
-          <Link href="/" className="flex flex-col items-center justify-center text-gray-800 hover:text-[#7C9270]">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            <span className="text-xs mt-1">Home</span>
-          </Link>
-          
-          <Link href="/program?event=0" className="flex flex-col items-center justify-center text-gray-800 hover:text-[#7C9270]">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="text-xs mt-1">Program</span>
-          </Link>
-          
-          <Link href="/wall-of-love" className="flex flex-col items-center justify-center text-[#7C9270]">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-            <span className="text-xs mt-1">Wall of Love</span>
-          </Link>
-        </div>
-      </nav>
     </div>
   );
 } 
