@@ -7,33 +7,40 @@ import { supabase } from '@/lib/supabase';
 
 type Song = {
   id: string;
-  title: string;
+  song_title: string;
   artist: string;
   album?: string;
-  albumArt?: string;
-  previewUrl?: string;
+  album_art?: string;
+  song_url?: string;
+  requester_name: string;
+  created_at: string;
+  upvotes: number;
 };
 
 // Type for ranked songs from database
 type RankedSong = {
+  id: string;
   song_title: string;
   artist: string;
-  count: number;
-  albumArt?: string;
-  previewUrl?: string;
+  album?: string;
+  album_art?: string;
+  song_url?: string;
+  requester_name: string;
+  created_at: string;
+  upvotes: number;
 };
 
 // iTunes API response type
 type iTunesResponse = {
-  resultCount: number;
-  results: Array<{
+  results: {
     trackId: number;
     trackName: string;
     artistName: string;
-    collectionName?: string;
-    artworkUrl100?: string;
+    collectionName: string;
+    artworkUrl100: string;
+    trackViewUrl: string;
     previewUrl?: string;
-  }>;
+  }[];
 };
 
 export default function RequestSongPage() {
@@ -50,6 +57,7 @@ export default function RequestSongPage() {
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const [playingPreview, setPlayingPreview] = useState<string | null>(null);
+  const [upvotingId, setUpvotingId] = useState<string | null>(null);
 
   // Fetch ranked songs on component mount
   useEffect(() => {
@@ -67,83 +75,17 @@ export default function RequestSongPage() {
   const fetchRankedSongs = async () => {
     setIsLoadingRankedSongs(true);
     try {
-      // Get song counts grouped by title and artist
       const { data, error } = await supabase
         .from('song_requests')
-        .select('song_title, artist, album_art, song_url')
+        .select('*')
+        .order('upvotes', { ascending: false })
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching song requests:', error);
-        return;
-      }
-
-      // Count occurrences and create ranked list
-      const songMap = new Map<string, RankedSong>();
-      
-      data.forEach(item => {
-        const key = `${item.song_title}|${item.artist}`;
-        if (songMap.has(key)) {
-          const existing = songMap.get(key)!;
-          songMap.set(key, {
-            ...existing,
-            count: existing.count + 1,
-            // Keep existing values for albumArt and previewUrl if they exist
-            albumArt: existing.albumArt || item.album_art,
-            previewUrl: existing.previewUrl || item.song_url
-          });
-        } else {
-          songMap.set(key, {
-            song_title: item.song_title,
-            artist: item.artist,
-            count: 1,
-            albumArt: item.album_art,
-            previewUrl: item.song_url
-          });
-        }
-      });
-
-      // Convert to array and sort by count (descending)
-      const sortedSongs = Array.from(songMap.values())
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10); // Get top 10 songs
-
-      // For songs without artwork or preview URL, fetch them from iTunes
-      const songsWithMediaData = await Promise.all(
-        sortedSongs.map(async (song) => {
-          // Skip iTunes lookup if we already have both album art and preview URL
-          if (song.albumArt && song.previewUrl) {
-            return song;
-          }
-          
-          try {
-            // Look up song in iTunes
-            const query = encodeURIComponent(`${song.song_title} ${song.artist}`);
-            const response = await fetch(
-              `https://itunes.apple.com/search?term=${query}&entity=song&limit=1`
-            );
-            
-            if (response.ok) {
-              const data = await response.json() as iTunesResponse;
-              if (data.results.length > 0) {
-                return {
-                  ...song,
-                  albumArt: song.albumArt || data.results[0].artworkUrl100?.replace('100x100bb', '300x300bb'),
-                  previewUrl: song.previewUrl || data.results[0].previewUrl
-                };
-              }
-            }
-            return song;
-          } catch (err) {
-            console.error('Error fetching song media data:', err);
-            return song;
-          }
-        })
-      );
-
-      setRankedSongs(songsWithMediaData);
+      if (error) throw error;
+      setRankedSongs(data || []);
     } catch (err) {
-      console.error('Error processing ranked songs:', err);
+      console.error('Error fetching ranked songs:', err);
+      setError('Failed to load songs. Please try again later.');
     } finally {
       setIsLoadingRankedSongs(false);
     }
@@ -159,7 +101,7 @@ export default function RequestSongPage() {
       
       // Make request to iTunes Search API
       const response = await fetch(
-        `https://itunes.apple.com/search?term=${encodedQuery}&entity=song&limit=10`
+        `https://itunes.apple.com/search?term=${encodedQuery}&media=music&entity=song&limit=5`
       );
       
       if (!response.ok) {
@@ -169,18 +111,25 @@ export default function RequestSongPage() {
       const data = await response.json() as iTunesResponse;
       
       // Map iTunes results to our Song interface
-      return data.results.map(item => ({
-        id: item.trackId.toString(),
-        title: item.trackName,
-        artist: item.artistName,
-        album: item.collectionName,
-        albumArt: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : undefined,
-        previewUrl: item.previewUrl
-      }));
+      return mapiTunesResultsToSongs(data);
     } catch (err) {
       console.error('Error searching iTunes API:', err);
       return [];
     }
+  };
+
+  const mapiTunesResultsToSongs = (data: iTunesResponse): Song[] => {
+    return data.results.map(item => ({
+      id: item.trackId.toString(),
+      song_title: item.trackName,
+      artist: item.artistName,
+      album: item.collectionName,
+      album_art: item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '300x300bb') : undefined,
+      song_url: item.previewUrl || item.trackViewUrl,
+      requester_name: '',
+      created_at: new Date().toISOString(),
+      upvotes: 0
+    }));
   };
 
   // Handle search input changes
@@ -251,12 +200,13 @@ export default function RequestSongPage() {
         .from('song_requests')
         .insert([
           {
-            song_title: selectedSong.title,
+            song_title: selectedSong.song_title,
             artist: selectedSong.artist,
             album: selectedSong.album || '',
-            album_art: selectedSong.albumArt || '',
-            song_url: selectedSong.previewUrl || '',
+            album_art: selectedSong.album_art || '',
+            song_url: selectedSong.song_url || '',
             requester_name: requesterName || 'Anonymous',
+            upvotes: 0,
             created_at: new Date().toISOString()
           }
         ]);
@@ -294,6 +244,40 @@ export default function RequestSongPage() {
     }
   };
 
+  const handleUpvote = async (id: string) => {
+    try {
+      setUpvotingId(id);
+      const { data: song, error: fetchError } = await supabase
+        .from('song_requests')
+        .select('upvotes')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const { error: updateError } = await supabase
+        .from('song_requests')
+        .update({ upvotes: (song.upvotes || 0) + 1 })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setRankedSongs(prev => 
+        prev.map(song => 
+          song.id === id 
+            ? { ...song, upvotes: (song.upvotes || 0) + 1 }
+            : song
+        ).sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0))
+      );
+    } catch (err) {
+      console.error('Error upvoting song:', err);
+      setError('Failed to upvote song. Please try again.');
+    } finally {
+      setUpvotingId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen overflow-y-auto bg-gradient-to-b from-purple-50 to-white">
       <div className="max-w-4xl mx-auto p-6">
@@ -311,7 +295,7 @@ export default function RequestSongPage() {
             <HeartLogo width={100} height={100} />
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-[#7C9270] mb-2">Request a Song</h1>
-          <p className="text-gray-800">What song would you like to dance to?</p>
+          <p className="text-gray-800">Search for a song and request it for the wedding</p>
         </div>
         
         <div className="grid md:grid-cols-2 gap-8">
@@ -385,15 +369,15 @@ export default function RequestSongPage() {
                             className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
                             onClick={() => handleSongSelect(song)}
                           >
-                            {song.albumArt && (
+                            {song.album_art && (
                               <img 
-                                src={song.albumArt} 
-                                alt={`${song.title} album art`}
+                                src={song.album_art} 
+                                alt={`${song.song_title} album art`}
                                 className="w-10 h-10 rounded mr-3 object-cover"
                               />
                             )}
                             <div>
-                              <div className="font-medium text-gray-800">{song.title}</div>
+                              <div className="font-medium text-gray-800">{song.song_title}</div>
                               <div className="text-sm text-gray-600">{song.artist}</div>
                             </div>
                           </div>
@@ -406,15 +390,15 @@ export default function RequestSongPage() {
                 {selectedSong && (
                   <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center">
-                      {selectedSong.albumArt && (
+                      {selectedSong.album_art && (
                         <img 
-                          src={selectedSong.albumArt} 
-                          alt={`${selectedSong.title} album art`}
+                          src={selectedSong.album_art} 
+                          alt={`${selectedSong.song_title} album art`}
                           className="w-12 h-12 rounded mr-3 object-cover"
                         />
                       )}
                       <div className="flex-1">
-                        <div className="font-medium text-gray-800">{selectedSong.title}</div>
+                        <div className="font-medium text-gray-800">{selectedSong.song_title}</div>
                         <div className="text-sm text-gray-600">{selectedSong.artist}</div>
                       </div>
                       <button 
@@ -485,25 +469,23 @@ export default function RequestSongPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {rankedSongs.map((song, index) => (
-                  <div key={`${song.song_title}-${song.artist}`} className="flex items-center p-3 border-b border-gray-100 last:border-b-0">
-                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center font-bold text-xl text-gray-500 mr-3">
-                      {index + 1}.
-                    </div>
-                    {song.albumArt ? (
-                      <div className="relative w-12 h-12 mr-3">
+                {rankedSongs.map((song) => (
+                  <div key={song.id} className="flex items-start p-3 border-b border-gray-100 last:border-b-0 gap-3">
+                    {/* Album Art / Placeholder */}
+                    {song.album_art ? (
+                      <div className="relative flex-shrink-0 w-12 h-12">
                         <img 
-                          src={song.albumArt} 
+                          src={song.album_art} 
                           alt={`${song.song_title} album art`}
-                          className="w-12 h-12 rounded object-cover"
+                          className="w-full h-full rounded object-cover"
                         />
-                        {song.previewUrl && (
+                        {song.song_url && (
                           <button
-                            onClick={() => togglePreview(song.previewUrl!)}
+                            onClick={() => togglePreview(song.song_url!)}
                             className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded hover:bg-opacity-40 transition-opacity"
-                            aria-label={playingPreview === song.previewUrl ? "Pause preview" : "Play preview"}
+                            aria-label={playingPreview === song.song_url ? "Pause preview" : "Play preview"}
                           >
-                            {playingPreview === song.previewUrl ? (
+                            {playingPreview === song.song_url ? (
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
@@ -517,19 +499,34 @@ export default function RequestSongPage() {
                         )}
                       </div>
                     ) : (
-                      <div className="w-12 h-12 rounded mr-3 bg-gray-200 flex items-center justify-center text-gray-400">
+                      <div className="flex-shrink-0 w-12 h-12 rounded bg-gray-200 flex items-center justify-center text-gray-400">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                         </svg>
                       </div>
                     )}
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-800">{song.song_title}</div>
-                      <div className="text-sm text-gray-600">{song.artist}</div>
+                    
+                    {/* Song Info & Requester */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-800 truncate">{song.song_title}</div>
+                      <div className="text-sm text-gray-600 truncate">{song.artist}</div>
+                      <div className="mt-1 bg-purple-100 rounded-full px-2 py-0.5 inline-block text-xs text-purple-700 font-medium">
+                        Requested by {song.requester_name || 'Anonymous'} • {new Date(song.created_at).toLocaleDateString()}
+                      </div>
                     </div>
-                    <div className="flex-shrink-0 bg-purple-100 rounded-full px-3 py-1 text-sm text-purple-700 font-medium">
-                      {song.count} {song.count === 1 ? 'request' : 'requests'}
-                    </div>
+
+                    {/* Upvote Button */}
+                    <button
+                      onClick={() => handleUpvote(song.id)}
+                      disabled={upvotingId === song.id}
+                      className="flex flex-col items-center flex-shrink-0 text-[#7C9270] hover:text-[#5A6851] transition-colors disabled:opacity-50 pt-1"
+                      aria-label="Upvote song"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                      <span className="text-sm font-medium mt-0.5">{song.upvotes || 0}</span>
+                    </button>
                   </div>
                 ))}
                 
