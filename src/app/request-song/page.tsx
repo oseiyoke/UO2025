@@ -80,7 +80,7 @@ export default function RequestSongPage() {
         .select('*')
         .order('upvotes', { ascending: false })
         .order('created_at', { ascending: false });
-
+      console.log("here's the data", data)
       if (error) throw error;
       setRankedSongs(data || []);
     } catch (err) {
@@ -99,13 +99,13 @@ export default function RequestSongPage() {
       // Encode the search query for URL
       const encodedQuery = encodeURIComponent(query);
       
-      // Make request to iTunes Search API
+      // Make request through our own API route instead of directly to iTunes
       const response = await fetch(
-        `https://itunes.apple.com/search?term=${encodedQuery}&media=music&entity=song&limit=5`
+        `/api/search-songs?term=${encodedQuery}&media=music&entity=song&limit=5`
       );
       
       if (!response.ok) {
-        throw new Error(`iTunes API responded with status: ${response.status}`);
+        throw new Error(`API responded with status: ${response.status}`);
       }
       
       const data = await response.json() as iTunesResponse;
@@ -113,7 +113,7 @@ export default function RequestSongPage() {
       // Map iTunes results to our Song interface
       return mapiTunesResultsToSongs(data);
     } catch (err) {
-      console.error('Error searching iTunes API:', err);
+      console.error('Error searching songs:', err);
       return [];
     }
   };
@@ -230,17 +230,6 @@ export default function RequestSongPage() {
       setError('Failed to submit song request. Please try again.');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  // Function to play/pause audio preview
-  const togglePreview = (previewUrl: string) => {
-    if (playingPreview === previewUrl) {
-      // Pause current preview
-      setPlayingPreview(null);
-    } else {
-      // Stop any currently playing preview and play the new one
-      setPlayingPreview(previewUrl);
     }
   };
 
@@ -474,29 +463,11 @@ export default function RequestSongPage() {
                     {/* Album Art / Placeholder */}
                     {song.album_art ? (
                       <div className="relative flex-shrink-0 w-12 h-12">
-                        <img 
+                      <img 
                           src={song.album_art} 
                           alt={`${song.song_title} album art`}
                           className="w-full h-full rounded object-cover"
                         />
-                        {song.song_url && (
-                          <button
-                            onClick={() => togglePreview(song.song_url!)}
-                            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded hover:bg-opacity-40 transition-opacity"
-                            aria-label={playingPreview === song.song_url ? "Pause preview" : "Play preview"}
-                          >
-                            {playingPreview === song.song_url ? (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            ) : (
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            )}
-                          </button>
-                        )}
                       </div>
                     ) : (
                       <div className="flex-shrink-0 w-12 h-12 rounded bg-gray-200 flex items-center justify-center text-gray-400">
