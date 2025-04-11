@@ -47,21 +47,20 @@ export default function Home() {
           </a>
           
           {/* Action Buttons */}
-          <div className="w-full max-w-md space-y-10 mt-6">
-            <Link href="/program?event=0">
+          <div className="w-full max-w-md space-y-10 mt-6">            
+            <Link href="/wall-of-love">
               <div className="flex items-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-lg transition-shadow cursor-pointer border border-gray-100 mb-4">
-                <div className="bg-[#7C9270] rounded-full p-3 mr-4">
+                <div className="bg-pink-500 rounded-full p-3 mr-4">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-800 text-lg">View Program</h3>
-                  <p className="text-gray-600 text-sm">See event schedule and details</p>
+                  <h3 className="font-semibold text-gray-800 text-lg">Wall of Love</h3>
+                  <p className="text-gray-600 text-sm">Share your wishes and memories</p>
                 </div>
               </div>
             </Link>
-            
            
             <Link href="/request-song">
               <div className="flex items-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-lg transition-shadow cursor-pointer border border-gray-100">
