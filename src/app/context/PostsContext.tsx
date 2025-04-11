@@ -8,6 +8,7 @@ export interface Post {
   author: string;
   message: string;
   image_url?: string;
+  additional_media?: string[];
   created_at: string;
 }
 
