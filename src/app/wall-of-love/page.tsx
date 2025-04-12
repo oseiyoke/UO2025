@@ -59,19 +59,41 @@ export default function WallOfLovePage() {
           return;
         }
         
-        // Only process image files
-        if (!file.type.startsWith('image/')) return;
+        // Process image files
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            newPreviewUrls.push(reader.result as string);
+            processedCount++;
+            
+            if (processedCount === fileArray.length) {
+              setPreviewUrls(newPreviewUrls);
+            }
+          };
+          reader.readAsDataURL(file);
+          return;
+        }
         
-        const reader = new FileReader();
-        reader.onload = () => {
-          newPreviewUrls.push(reader.result as string);
+        // Process video files
+        if (file.type.startsWith('video/')) {
+          // Create a video thumbnail or use a placeholder
+          const videoUrl = URL.createObjectURL(file);
+          newPreviewUrls.push(videoUrl);
           processedCount++;
           
           if (processedCount === fileArray.length) {
             setPreviewUrls(newPreviewUrls);
           }
-        };
-        reader.readAsDataURL(file);
+          return;
+        }
+        
+        // Unrecognized file type
+        newPreviewUrls.push(''); // Use empty placeholder
+        processedCount++;
+        
+        if (processedCount === fileArray.length) {
+          setPreviewUrls(newPreviewUrls);
+        }
       });
       
       // Open modal after selection
@@ -210,14 +232,18 @@ export default function WallOfLovePage() {
             return newStatus;
           });
           
-          // Step 1: Optimize the image
-          setFileUploadStatus(prev => {
-            const newStatus = [...prev];
-            newStatus[i] = {...newStatus[i], progress: 20, status: 'uploading'};
-            return newStatus;
-          });
-          
-          const optimizedFile = await optimizeImage(file);
+          // For images, optimize them. For videos, use as is.
+          let processedFile = file;
+          if (file.type.startsWith('image/')) {
+            // Step 1: Optimize the image
+            setFileUploadStatus(prev => {
+              const newStatus = [...prev];
+              newStatus[i] = {...newStatus[i], progress: 20, status: 'uploading'};
+              return newStatus;
+            });
+            
+            processedFile = await optimizeImage(file);
+          }
           
           // Step 2: Upload begins
           setFileUploadStatus(prev => {
@@ -234,7 +260,7 @@ export default function WallOfLovePage() {
           const { error: uploadError } = await supabase
             .storage
             .from('wall-of-love')
-            .upload(filePath, optimizedFile);
+            .upload(filePath, processedFile);
 
           if (uploadError) {
             console.error('Error uploading file:', uploadError);
@@ -370,18 +396,35 @@ export default function WallOfLovePage() {
   const renderMedia = (url: string, postId?: string, isPreview = false) => {
     const mediaId = url;
     const isVisible = visibleMedias.has(mediaId) || isPreview || (postId && expandedPosts[postId]);
-
+    
     if (!isVisible && !isPreview) {
       return (
         <div 
           className="media-placeholder bg-gray-100 rounded-md flex items-center justify-center min-h-[200px]"
           data-media-id={mediaId}
         >
-          <div className="animate-pulse">Loading image...</div>
+          <div className="animate-pulse">Loading media...</div>
         </div>
       );
     }
-
+    
+    // Check if this is a video URL
+    const isVideo = isPreview 
+      ? (url && url.startsWith('blob:') && selectedFiles.find((f, i) => previewUrls[i] === url)?.type.startsWith('video/'))
+      : url.match(/\.(mp4|webm|ogg|mov)$/i);
+    
+    if (isVideo) {
+      return (
+        <video 
+          src={url}
+          controls
+          className="w-full h-auto object-cover rounded-md max-h-[500px]"
+          preload="metadata"
+        />
+      );
+    }
+    
+    // Default to image
     return (
       <img 
         src={url}
@@ -419,18 +462,25 @@ export default function WallOfLovePage() {
           <button 
             onClick={openFilePicker}
             className="bg-[#7C9270] hover:bg-[#5A6851] text-white rounded-full p-5 shadow-lg transition-all hover:scale-105 active:scale-95"
-            aria-label="Share photos"
+            aria-label="Share photos and videos"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <div className="flex items-center space-x-2">
+              {/* Camera icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {/* Video camera icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
           </button>
           
           {/* Hidden file input */}
           <input
             type="file"
-            accept="image/*,.heic"
+            accept="image/*,video/*,.heic"
             multiple
             ref={fileInputRef}
             onChange={handleFileSelect}
@@ -443,7 +493,7 @@ export default function WallOfLovePage() {
           <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
-                <h3 className="text-xl font-bold mb-4">Share Your Photos</h3>
+                <h3 className="text-xl font-bold mb-4">Share Your Photos & Videos</h3>
                 
                 {previewUrls.length > 0 ? (
                   <div className="mb-4 grid grid-cols-2 gap-2">
@@ -536,7 +586,7 @@ export default function WallOfLovePage() {
                       <p className="text-sm text-gray-600">
                         {
                           uploadProgress < 100 
-                            ? `Uploading photo ${fileUploadStatus.findIndex(s => s.status === 'uploading') + 1} of ${selectedFiles.length}...` 
+                            ? `Uploading media ${fileUploadStatus.findIndex(s => s.status === 'uploading') + 1} of ${selectedFiles.length}...` 
                             : 'Creating post...'
                         }
                       </p>
@@ -557,7 +607,7 @@ export default function WallOfLovePage() {
                       className="flex-1 bg-[#7C9270] text-white py-2 px-4 rounded-md hover:bg-[#5A6851] transition-colors"
                       disabled={isUploading || previewUrls.length === 0}
                     >
-                      {isUploading ? 'Uploading...' : 'Share Photos'}
+                      {isUploading ? 'Uploading...' : 'Share Media'}
                     </button>
                   </div>
                 </form>
@@ -576,12 +626,23 @@ export default function WallOfLovePage() {
         {/* Empty State */}
         {!loading && posts.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-600 mb-4">No photos yet. Be the first to share!</p>
+            <p className="text-gray-600 mb-4">No photos or videos yet. Be the first to share!</p>
             <button 
               onClick={openFilePicker}
-              className="bg-[#7C9270] text-white py-2 px-6 rounded-md hover:bg-[#5A6851] transition-colors"
+              className="bg-[#7C9270] text-white py-2 px-6 rounded-md hover:bg-[#5A6851] transition-colors flex items-center justify-center mx-auto space-x-2"
             >
-              Share Photos
+              <span>Share Photos & Videos</span>
+              <div className="flex items-center space-x-1">
+                {/* Camera icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {/* Video camera icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
             </button>
           </div>
         )}
