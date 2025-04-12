@@ -15,6 +15,7 @@ export default function WallOfLovePage() {
   const [authorName, setAuthorName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [maxFilesAlert, setMaxFilesAlert] = useState(false);
   // Track individual file upload progress
   const [fileUploadStatus, setFileUploadStatus] = useState<{
     index: number;
@@ -40,20 +41,31 @@ export default function WallOfLovePage() {
     const files = e.target.files;
     
     if (files && files.length > 0) {
+      // Limit to max 10 files
+      const MAX_FILES = 10;
       const fileArray = Array.from(files);
-      setSelectedFiles(fileArray);
+      
+      // Show alert if more than MAX_FILES files were selected
+      if (fileArray.length > MAX_FILES) {
+        setMaxFilesAlert(true);
+        setTimeout(() => setMaxFilesAlert(false), 5000); // Hide alert after 5 seconds
+      }
+      
+      // Only take the first MAX_FILES files
+      const limitedFiles = fileArray.slice(0, MAX_FILES);
+      setSelectedFiles(limitedFiles);
       
       // Generate previews
       const newPreviewUrls: string[] = [];
       let processedCount = 0;
       
-      fileArray.forEach(file => {
+      limitedFiles.forEach(file => {
         // For HEIC files, we'll use the file name for now and generate a proper preview later
         if (file.name.toLowerCase().endsWith('.heic')) {
           newPreviewUrls.push(''); // Placeholder for HEIC files
           processedCount++;
           
-          if (processedCount === fileArray.length) {
+          if (processedCount === limitedFiles.length) {
             setPreviewUrls(newPreviewUrls);
           }
           return;
@@ -66,7 +78,7 @@ export default function WallOfLovePage() {
             newPreviewUrls.push(reader.result as string);
             processedCount++;
             
-            if (processedCount === fileArray.length) {
+            if (processedCount === limitedFiles.length) {
               setPreviewUrls(newPreviewUrls);
             }
           };
@@ -81,7 +93,7 @@ export default function WallOfLovePage() {
           newPreviewUrls.push(videoUrl);
           processedCount++;
           
-          if (processedCount === fileArray.length) {
+          if (processedCount === limitedFiles.length) {
             setPreviewUrls(newPreviewUrls);
           }
           return;
@@ -91,7 +103,7 @@ export default function WallOfLovePage() {
         newPreviewUrls.push(''); // Use empty placeholder
         processedCount++;
         
-        if (processedCount === fileArray.length) {
+        if (processedCount === limitedFiles.length) {
           setPreviewUrls(newPreviewUrls);
         }
       });
@@ -438,6 +450,18 @@ export default function WallOfLovePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-white pb-20">
       <div className="max-w-4xl mx-auto p-6">
+        {/* Alert for max files exceeded */}
+        {maxFilesAlert && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-amber-100 border border-amber-400 text-amber-700 px-4 py-3 rounded z-50 shadow-md">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clipRule="evenodd"></path>
+              </svg>
+              <p>Maximum 10 files allowed. Only the first 10 files will be used.</p>
+            </div>
+          </div>
+        )}
+        
         <div className="text-center mb-8">
           <div className="mb-6">
             <HeartLogo width={100} height={100} />
@@ -494,6 +518,12 @@ export default function WallOfLovePage() {
             <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <h3 className="text-xl font-bold mb-4">Share Your Photos & Videos</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-gray-600 text-sm">Maximum 10 files allowed per upload.</p>
+                  <span className="text-sm font-medium bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                    {selectedFiles.length}/10 files
+                  </span>
+                </div>
                 
                 {previewUrls.length > 0 ? (
                   <div className="mb-4 grid grid-cols-2 gap-2">
@@ -631,7 +661,7 @@ export default function WallOfLovePage() {
               onClick={openFilePicker}
               className="bg-[#7C9270] text-white py-2 px-6 rounded-md hover:bg-[#5A6851] transition-colors flex items-center justify-center mx-auto space-x-2"
             >
-              <span>Share Photos & Videos</span>
+              <span>Share Photos & Videos (Max 10)</span>
               <div className="flex items-center space-x-1">
                 {/* Camera icon */}
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
