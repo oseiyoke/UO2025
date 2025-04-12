@@ -16,6 +16,7 @@ export default function WallOfLovePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [maxFilesAlert, setMaxFilesAlert] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   // Track individual file upload progress
   const [fileUploadStatus, setFileUploadStatus] = useState<{
     index: number;
@@ -24,6 +25,7 @@ export default function WallOfLovePage() {
     status: 'pending' | 'uploading' | 'complete' | 'error';
   }[]>([]);
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
+  const [postSlides, setPostSlides] = useState<Record<string, number>>({});
 
   // File input reference
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -34,6 +36,29 @@ export default function WallOfLovePage() {
       ...prev,
       [postId]: !prev[postId]
     }));
+  };
+
+  // Navigate post slides
+  const navigatePostSlide = (postId: string, direction: 'next' | 'prev') => {
+    setPostSlides(prev => {
+      const currentIndex = prev[postId] || 0;
+      const post = posts.find(p => p.id.toString() === postId);
+      
+      if (!post) return prev;
+      
+      const totalSlides = 1 + (post.additional_media ? post.additional_media.length : 0);
+      
+      let newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+      
+      // Handle wrap-around
+      if (newIndex < 0) newIndex = totalSlides - 1;
+      if (newIndex >= totalSlides) newIndex = 0;
+      
+      return {
+        ...prev,
+        [postId]: newIndex
+      };
+    });
   };
 
   // Handle file selection
@@ -367,6 +392,7 @@ export default function WallOfLovePage() {
     setAuthorName('');
     setUploadProgress(0);
     setFileUploadStatus([]);
+    setCurrentSlide(0);
   };
 
   // Function to format date
@@ -430,7 +456,7 @@ export default function WallOfLovePage() {
         <video 
           src={url}
           controls
-          className="w-full h-auto object-cover rounded-md max-h-[500px]"
+          className="w-full h-full object-cover rounded-md"
           preload="metadata"
         />
       );
@@ -441,7 +467,7 @@ export default function WallOfLovePage() {
       <img 
         src={url}
         alt="Shared memory" 
-        className="w-full h-auto object-cover rounded-md max-h-[500px]"
+        className="w-full h-full object-cover rounded-md"
         loading="lazy"
       />
     );
@@ -526,72 +552,150 @@ export default function WallOfLovePage() {
                 </div>
                 
                 {previewUrls.length > 0 ? (
-                  <div className="mb-4 grid grid-cols-2 gap-2">
-                    {previewUrls.map((url, index) => (
-                      <div key={index} className="relative">
-                        {url ? (
-                          renderMedia(url, undefined, true)
+                  <div className="mb-4">
+                    {/* Carousel container */}
+                    <div className="relative">
+                      {/* Main carousel slide */}
+                      <div className="relative mb-2 h-[250px] bg-gray-100 rounded-md overflow-hidden">
+                        {previewUrls[currentSlide] ? (
+                          <div className="h-full">
+                            {renderMedia(previewUrls[currentSlide], undefined, true)}
+                          </div>
                         ) : (
-                          <div className="bg-gray-100 rounded-md flex items-center justify-center h-[150px]">
+                          <div className="h-full flex items-center justify-center">
                             <div className="text-center p-4">
                               <p className="text-gray-500 text-sm mb-1">
-                                {selectedFiles[index]?.name || 'Image file'}
+                                {selectedFiles[currentSlide]?.name || 'Media file'}
                               </p>
                               <p className="text-xs text-gray-400">Preview not available</p>
                             </div>
                           </div>
                         )}
-                        <div className="absolute top-2 right-2 bg-white rounded-full w-6 h-6 flex items-center justify-center text-xs">
-                          {index + 1}
+                        
+                        {/* Slide counter */}
+                        <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs rounded-full px-2 py-1">
+                          {currentSlide + 1} / {previewUrls.length}
                         </div>
+                        
+                        {/* Upload status overlay */}
                         {isUploading && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center p-2">
-                            {fileUploadStatus[index]?.status === 'pending' && (
+                            {fileUploadStatus[currentSlide]?.status === 'pending' && (
                               <span className="text-white text-xs font-medium">Waiting...</span>
                             )}
                             
-                            {fileUploadStatus[index]?.status === 'uploading' && (
+                            {fileUploadStatus[currentSlide]?.status === 'uploading' && (
                               <>
-                                <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
+                                <div className="w-full max-w-[80%] bg-gray-200 rounded-full h-2 mb-1">
                                   <div 
                                     className="bg-[#7C9270] h-2 rounded-full" 
-                                    style={{ width: `${fileUploadStatus[index]?.progress || 0}%` }}
+                                    style={{ width: `${fileUploadStatus[currentSlide]?.progress || 0}%` }}
                                   />
                                 </div>
                                 <span className="text-white text-xs font-medium">
                                   {
-                                    fileUploadStatus[index]?.progress <= 20 ? 'Converting...' :
-                                    fileUploadStatus[index]?.progress <= 40 ? 'Preparing...' :
-                                    fileUploadStatus[index]?.progress <= 80 ? 'Uploading...' :
+                                    fileUploadStatus[currentSlide]?.progress <= 20 ? 'Converting...' :
+                                    fileUploadStatus[currentSlide]?.progress <= 40 ? 'Preparing...' :
+                                    fileUploadStatus[currentSlide]?.progress <= 80 ? 'Uploading...' :
                                     'Finishing...'
                                   }
                                 </span>
                               </>
                             )}
                             
-                            {fileUploadStatus[index]?.status === 'complete' && (
-                              <div className="bg-green-500 text-white rounded-full p-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            {fileUploadStatus[currentSlide]?.status === 'complete' && (
+                              <div className="bg-green-500 text-white rounded-full p-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                 </svg>
                               </div>
                             )}
                             
-                            {fileUploadStatus[index]?.status === 'error' && (
-                              <div className="bg-red-500 text-white rounded-full p-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            {fileUploadStatus[currentSlide]?.status === 'error' && (
+                              <div className="bg-red-500 text-white rounded-full p-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                 </svg>
                               </div>
                             )}
                           </div>
                         )}
+                        
+                        {/* Navigation arrows */}
+                        {previewUrls.length > 1 && (
+                          <>
+                            <button 
+                              onClick={() => setCurrentSlide(prev => (prev === 0 ? previewUrls.length - 1 : prev - 1))}
+                              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 rounded-full p-1 text-white hover:bg-opacity-70 focus:outline-none"
+                              disabled={isUploading}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                              </svg>
+                            </button>
+                            <button 
+                              onClick={() => setCurrentSlide(prev => (prev === previewUrls.length - 1 ? 0 : prev + 1))}
+                              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 rounded-full p-1 text-white hover:bg-opacity-70 focus:outline-none"
+                              disabled={isUploading}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </>
+                        )}
                       </div>
-                    ))}
+                      
+                      {/* Thumbnail navigation */}
+                      {previewUrls.length > 1 && (
+                        <div className="flex overflow-x-auto space-x-2 pb-2 max-w-full">
+                          {previewUrls.map((url, index) => (
+                            <div 
+                              key={index} 
+                              onClick={() => !isUploading && setCurrentSlide(index)}
+                              className={`relative flex-shrink-0 w-16 h-16 cursor-pointer rounded-md overflow-hidden ${index === currentSlide ? 'ring-2 ring-[#7C9270]' : 'opacity-70'}`}
+                            >
+                              {url ? (
+                                <div className="w-full h-full">
+                                  {url.startsWith('blob:') && selectedFiles[index]?.type.startsWith('video/') ? (
+                                    <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                    </div>
+                                  ) : (
+                                    <img 
+                                      src={url} 
+                                      alt={`Thumbnail ${index + 1}`} 
+                                      className="w-full h-full object-cover"
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                  <span className="text-xs text-gray-500">{index + 1}</span>
+                                </div>
+                              )}
+                              
+                              {/* Status indicator dot */}
+                              {fileUploadStatus[index] && (
+                                <div className={`absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full ${
+                                  fileUploadStatus[index]?.status === 'complete' ? 'bg-green-500' :
+                                  fileUploadStatus[index]?.status === 'error' ? 'bg-red-500' :
+                                  fileUploadStatus[index]?.status === 'uploading' ? 'bg-yellow-500' :
+                                  'bg-gray-500'
+                                }`} />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="mb-4 p-4 bg-gray-100 rounded-md text-center text-gray-500">
-                    Processing images...
+                    Processing media...
                   </div>
                 )}
                 
@@ -683,6 +787,12 @@ export default function WallOfLovePage() {
             {posts.map(post => {
               // Calculate total media count
               const mediaCount = 1 + (post.additional_media ? post.additional_media.length : 0);
+              // Get all media URLs into one array
+              const allMedia = post.image_url 
+                ? [post.image_url, ...(post.additional_media || [])]
+                : post.additional_media || [];
+              // Get current slide index for this post
+              const currentPostSlide = postSlides[post.id] || 0;
               
               return (
                 <div key={post.id} className="bg-white rounded-xl shadow p-6">
@@ -699,33 +809,90 @@ export default function WallOfLovePage() {
                       onClick={() => toggleExpanded(post.id.toString())}
                       className="bg-[#7C9270] hover:bg-[#5A6851] text-white rounded-md px-3 py-1.5 text-sm flex items-center transition-colors"
                     >
-                      {expandedPosts[post.id] ? 'Hide Photos' : 'View Photos'}
+                      {expandedPosts[post.id] ? 'Hide Media' : 'View Media'}
                     </button>
                     <span className="text-gray-600 text-sm">
-                      {mediaCount} {mediaCount === 1 ? 'photo' : 'photos'}
+                      {mediaCount} {mediaCount === 1 ? 'item' : 'items'}
                     </span>
                   </div>
                   
                   {/* Show media only when expanded */}
                   {expandedPosts[post.id] && (
-                    <>
-                      {post.image_url && (
-                        <div className="mt-4 rounded-md overflow-hidden">
-                          {renderMedia(post.image_url, post.id.toString())}
+                    <div className="mt-4">
+                      {/* Carousel container */}
+                      <div className="relative">
+                        {/* Main carousel slide */}
+                        <div className="relative overflow-hidden rounded-md h-[350px]">
+                          {allMedia[currentPostSlide] && renderMedia(allMedia[currentPostSlide]!, post.id.toString())}
+                          
+                          {/* Slide counter */}
+                          <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs rounded-full px-2 py-1">
+                            {currentPostSlide + 1} / {mediaCount}
+                          </div>
+                          
+                          {/* Navigation arrows for multiple items */}
+                          {mediaCount > 1 && (
+                            <>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigatePostSlide(post.id.toString(), 'prev');
+                                }}
+                                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 rounded-full p-1 text-white hover:bg-opacity-70 focus:outline-none"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigatePostSlide(post.id.toString(), 'next');
+                                }}
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 rounded-full p-1 text-white hover:bg-opacity-70 focus:outline-none"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </button>
+                            </>
+                          )}
                         </div>
-                      )}
-                      
-                      {/* Render additional media if available */}
-                      {post.additional_media && post.additional_media.length > 0 && (
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                          {post.additional_media.map((url: string, index: number) => (
-                            <div key={index} className="rounded-md overflow-hidden">
-                              {renderMedia(url, post.id.toString())}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
+                        
+                        {/* Thumbnail navigation for multiple items */}
+                        {mediaCount > 1 && (
+                          <div className="flex overflow-x-auto space-x-2 mt-2 pb-2">
+                            {allMedia.map((url, index) => (
+                              <div 
+                                key={index} 
+                                onClick={() => setPostSlides({...postSlides, [post.id]: index})}
+                                className={`relative flex-shrink-0 w-16 h-16 cursor-pointer rounded-md overflow-hidden ${
+                                  index === currentPostSlide ? 'ring-2 ring-[#7C9270]' : 'opacity-70'
+                                }`}
+                              >
+                                <div className="w-full h-full">
+                                  {url && url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                                    <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                    </div>
+                                  ) : (
+                                    <img 
+                                      src={url} 
+                                      alt={`Thumbnail ${index + 1}`} 
+                                      className="w-full h-full object-cover"
+                                      loading="lazy"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               );
